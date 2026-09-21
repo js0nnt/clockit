@@ -5,11 +5,13 @@ server in between.
 
 ## Setup
 
-A deployment bakes its own Client ID in through `VITE_SPOTIFY_CLIENT_ID` (see
-`.env.example`). With that set, visitors see one *Connect Spotify* button and never
-touch the developer dashboard — PKCE has no secret, so the ID is public by design.
+Clockit's own Client ID is built into `store.ts`, so visitors see one *Connect
+Spotify* button and never touch the developer dashboard — PKCE has no secret, so the
+ID is public by design and ends up in every browser regardless. A deployment can
+point at a different Spotify app by setting `VITE_SPOTIFY_CLIENT_ID` at build time.
 
-Without it — someone running their own copy — the panel falls back to a walkthrough:
+Behind *Using your own Spotify app?* the panel keeps a walkthrough for anyone who wants
+to use a Client ID of their own:
 
 1. Create an app at <https://developer.spotify.com/dashboard>.
 2. Add the redirect URI the panel shows, exactly as shown.

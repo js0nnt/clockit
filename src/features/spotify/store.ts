@@ -6,10 +6,14 @@ import { toPlayback, type Playback, type PlayerResponse, type RepeatMode } from 
 const API = 'https://api.spotify.com/v1'
 
 /**
- * The deployment's own Spotify app, baked in at build time. When present, visitors
- * just press Connect; the Client ID field only exists for people self-hosting.
+ * Clockit's own Spotify app. It is built in so visitors only ever see one Connect
+ * button — PKCE has no client secret, so a Client ID is public by design and ends up
+ * in every visitor's browser regardless. `VITE_SPOTIFY_CLIENT_ID` still overrides it
+ * at build time, for anyone deploying a copy against their own Spotify app.
  */
-const BUILT_IN_CLIENT_ID = (import.meta.env.VITE_SPOTIFY_CLIENT_ID ?? '').trim()
+const CLOCKIT_CLIENT_ID = '3b214e389a8e437cb874c4b77709bfe4'
+
+const BUILT_IN_CLIENT_ID = (import.meta.env.VITE_SPOTIFY_CLIENT_ID || CLOCKIT_CLIENT_ID).trim()
 export const hasBuiltInClientId = BUILT_IN_CLIENT_ID.length > 0
 
 /** A Client ID typed into the panel wins; otherwise the deployment's own is used. */

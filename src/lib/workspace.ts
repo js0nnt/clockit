@@ -67,7 +67,7 @@ export const DEFAULT_WORKSPACE: Workspace = {
   snap: true,
   snapStep: 24,
   placements: {
-    clock: { free: { x: 0.5, y: 0.46 }, bento: { col: 0, row: 0, w: 3, h: 2 } },
+    clock: { free: { x: 0.5, y: 0.5 }, bento: { col: 0, row: 0, w: 3, h: 2 } },
     player: { free: { x: 0.5, y: 0.1 }, bento: { col: 0, row: 2, w: 2, h: 1 } },
     lyrics: { free: { x: 0.5, y: 0.8 }, bento: { col: 2, row: 2, w: 2, h: 1 } },
     gif: { free: { x: 0.82, y: 0.72 }, bento: { col: 3, row: 0, w: 1, h: 2 } },

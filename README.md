@@ -10,22 +10,20 @@ npm run dev
 
 ## Deploying to Vercel
 
-It is a static Vite build, so Vercel detects everything except the Spotify app:
+It is a static Vite build plus one function, and Vercel detects all of it:
 
 1. **Import the repo** at [vercel.com/new](https://vercel.com/new). Framework, build
    command (`npm run build`) and output (`dist`) are all detected.
-2. **Add the environment variable** `VITE_SPOTIFY_CLIENT_ID` with your Spotify app's
-   Client ID, then deploy. Visitors then get a single *Connect Spotify* button.
-3. **Register the production URL** in your Spotify app's settings as a redirect URI —
+2. **Register the production URL** in the Spotify app's settings as a redirect URI —
    exactly `https://your-project.vercel.app`, no trailing slash.
-4. **Add storage for settings sync** (optional): *Storage → Create Database → Upstash
+3. **Add storage for settings sync** (optional): *Storage → Create Database → Upstash
    for Redis*, connected to this project, then redeploy. Signed-in users' setups then
    follow their Spotify account to any device. Without it everything still works, and
    settings are simply kept per browser.
 
-`VITE_SPOTIFY_CLIENT_ID` is baked in when the site is **built**, so adding or changing it
-needs a redeploy (*Deployments → ⋯ → Redeploy*). A build without it prints a warning and
-falls back to asking visitors for their own Client ID.
+Clockit's own Spotify Client ID is built in, so visitors get a single *Connect Spotify*
+button with nothing to configure. To point a copy at a different Spotify app, set
+`VITE_SPOTIFY_CLIENT_ID` — it is read at build time, so a change needs a redeploy.
 
 Two Spotify limits worth knowing before sharing the link:
 

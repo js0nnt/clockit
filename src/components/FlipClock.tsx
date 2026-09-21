@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { FlipTile } from './FlipTile'
 import { FONT_BY_ID } from '@/lib/fonts'
+import { useDigitOffset } from '@/lib/glyphCentre'
 import { toCss } from '@/lib/paint'
 import { playFlip } from '@/lib/sound'
 import { groupsFor } from '@/lib/time'
@@ -50,6 +51,10 @@ export function FlipClock({ budget }: { budget?: Budget }) {
 
   const font = FONT_BY_ID.get(s.font)!
   const { tileW, tileH } = metrics
+  const weight = font.weight ?? s.layout.fontThickness
+  // How far this font's digits sit off the seam, so they can be pulled back onto it.
+  const digitOffset = useDigitOffset(font.stack, weight)
+  const fontSize = s.layout.textSize * tileH
 
   const style = {
     '--tile-w': `${tileW}px`,
@@ -57,10 +62,11 @@ export function FlipClock({ budget }: { budget?: Budget }) {
     '--radius-edge': `${s.layout.edgeRounding * tileW}px`,
     '--radius-centre': `${s.layout.centreRounding * tileW}px`,
     '--flap-gap': `${s.layout.flapGap * tileH}px`,
-    '--text-size': `${s.layout.textSize * tileH}px`,
+    '--text-size': `${fontSize}px`,
+    '--glyph-shift': `${-digitOffset * fontSize}px`,
     '--text-offset': `${s.layout.textOffset * tileH}px`,
     '--font-stack': font.stack,
-    '--font-weight': font.weight ?? s.layout.fontThickness,
+    '--font-weight': weight,
     '--flap-paint': toCss(colors.flap),
     '--digit-paint': toCss(colors.digits),
     '--perspective': `${s.animation.perspective}px`,

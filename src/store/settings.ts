@@ -285,6 +285,12 @@ function mergeWorkspace(current: Workspace, saved: Partial<SettingsState>): Work
   }
   if (legacy && !workspace?.placements?.player) placements.player.free = legacy
 
+  // The clock's default used to sit at 46% down rather than dead centre. Anyone who
+  // never moved it still has that exact value saved, so bring them to the new
+  // default; a clock someone has actually dragged is left exactly where they put it.
+  const clock = placements.clock.free
+  if (clock.x === 0.5 && clock.y === 0.46) placements.clock.free = { x: 0.5, y: 0.5 }
+
   return {
     ...current,
     ...workspace,

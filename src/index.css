@@ -86,12 +86,18 @@ body {
   font-weight: var(--font-weight);
   font-size: var(--text-size);
   line-height: 1;
-  font-variant-numeric: tabular-nums;
+  /* Lining figures: every digit the same height, as on a real flip clock. Fonts that
+     default to old-style figures (Playfair) would otherwise bob up and down. */
+  font-variant-numeric: tabular-nums lining-nums;
   background-image: var(--digit-paint);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
   padding-bottom: var(--text-offset);
+  /* Per-font correction measured at runtime, so the digits themselves — not just
+     their line box — sit on the seam. `translate` rather than `transform` so it
+     composes with nothing else and can go in either direction. */
+  translate: 0 var(--glyph-shift, 0px);
 }
 
 .half-top .glyph,
