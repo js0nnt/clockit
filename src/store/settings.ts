@@ -91,7 +91,7 @@ export const DEFAULT_SPOTIFY: SpotifySettings = {
   autoHide: true,
 }
 
-interface SettingsState extends PortableState {
+export interface SettingsState extends PortableState {
   mode: ClockMode
   hideClock: boolean
   screenProtect: ScreenProtect
@@ -244,22 +244,29 @@ export const useSettings = create<SettingsState>()(
        * existed would replace the whole group and leave that field undefined. Merging
        * each group against its defaults keeps older saves loading as new ones ship.
        */
-      merge: (persisted, current) => {
-        const saved = (persisted ?? {}) as Partial<SettingsState>
-        return {
-          ...current,
-          ...saved,
-          layout: { ...current.layout, ...saved.layout },
-          animation: { ...current.animation, ...saved.animation },
-          backdrop: { ...current.backdrop, ...saved.backdrop },
-          pomodoro: { ...current.pomodoro, ...saved.pomodoro },
-          spotify: { ...current.spotify, ...saved.spotify },
-          workspace: mergeWorkspace(current.workspace, saved),
-        }
-      },
+      merge: (persisted, current) => mergeSaved(current, persisted),
     },
   ),
 )
+
+/**
+ * Lays saved settings over the current ones group by group. Used both when loading
+ * from this browser's storage and when applying settings synced from another device,
+ * so a save from before a field existed never leaves that field undefined.
+ */
+export function mergeSaved<T extends SettingsState>(current: T, persisted: unknown): T {
+  const saved = (persisted ?? {}) as Partial<SettingsState>
+  return {
+    ...current,
+    ...saved,
+    layout: { ...current.layout, ...saved.layout },
+    animation: { ...current.animation, ...saved.animation },
+    backdrop: { ...current.backdrop, ...saved.backdrop },
+    pomodoro: { ...current.pomodoro, ...saved.pomodoro },
+    spotify: { ...current.spotify, ...saved.spotify },
+    workspace: mergeWorkspace(current.workspace, saved),
+  }
+}
 
 /**
  * The player used to carry its own `spotify.position`; it is a workspace placement

@@ -47,6 +47,8 @@ interface SpotifyState {
   disconnect: () => void
   poll: () => Promise<void>
   loadProfile: () => Promise<void>
+  /** A fresh access token, refreshed if needed — for callers outside the store. */
+  getAccessToken: () => Promise<string | null>
 
   togglePlay: () => Promise<void>
   next: () => Promise<void>
@@ -169,6 +171,8 @@ export const useSpotify = create<SpotifyState>()(
           void get().loadProfile()
           void get().poll()
         },
+
+        getAccessToken: () => accessToken(),
 
         loadProfile: async () => {
           const response = await request('/me')

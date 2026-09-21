@@ -3,6 +3,7 @@ import { isLoopbackHostname, redirectUri } from './auth'
 import { effectiveClientId, hasBuiltInClientId, useSpotify } from './store'
 import { Panel } from '@/components/menu/Panel'
 import { Segmented, SectionTitle, Toggle } from '@/components/ui/controls'
+import { useSync } from '@/features/sync/sync'
 import { useSettings } from '@/store/settings'
 
 export function SpotifyPanel() {
@@ -172,6 +173,8 @@ function Connected() {
         </div>
       </div>
 
+      <SyncLine />
+
       {profile?.premium === false && (
         <p className="rounded-lg bg-amber-400/15 px-3 py-2 text-[10px] leading-relaxed text-white/80">
           This is a free Spotify account, so play, skip and seek won&apos;t work — Spotify
@@ -222,5 +225,30 @@ function Connected() {
         Disconnect Spotify
       </button>
     </>
+  )
+}
+
+/** One quiet line saying whether this setup follows the account. */
+function SyncLine() {
+  const { status } = useSync()
+
+  const text: Record<typeof status, string | null> = {
+    off: null,
+    syncing: 'Saving your setup to your Spotify account…',
+    synced: 'Your setup follows your Spotify account to any device.',
+    unavailable: 'Settings are saved in this browser only on this site.',
+    error: 'Could not reach settings sync — saved in this browser for now.',
+  }
+  if (!text[status]) return null
+
+  return (
+    <p className="flex items-center gap-1.5 px-1 text-[10px] leading-relaxed text-white/50">
+      <span
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+          status === 'synced' ? 'bg-[#1db954]' : status === 'syncing' ? 'animate-pulse bg-white/60' : 'bg-white/30'
+        }`}
+      />
+      {text[status]}
+    </p>
   )
 }

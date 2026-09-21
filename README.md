@@ -18,6 +18,14 @@ It is a static Vite build, so Vercel detects everything except the Spotify app:
    Client ID, then deploy. Visitors then get a single *Connect Spotify* button.
 3. **Register the production URL** in your Spotify app's settings as a redirect URI —
    exactly `https://your-project.vercel.app`, no trailing slash.
+4. **Add storage for settings sync** (optional): *Storage → Create Database → Upstash
+   for Redis*, connected to this project, then redeploy. Signed-in users' setups then
+   follow their Spotify account to any device. Without it everything still works, and
+   settings are simply kept per browser.
+
+`VITE_SPOTIFY_CLIENT_ID` is baked in when the site is **built**, so adding or changing it
+needs a redeploy (*Deployments → ⋯ → Redeploy*). A build without it prints a warning and
+falls back to asking visitors for their own Client ID.
 
 Two Spotify limits worth knowing before sharing the link:
 
@@ -31,7 +39,9 @@ Two Spotify limits worth knowing before sharing the link:
   preview alias as a second redirect URI).
 
 For local development, copy `.env.example` to `.env.local` and fill it in — or leave it
-empty and paste a Client ID in the Spotify panel instead.
+empty and paste a Client ID in the Spotify panel instead. `vite dev` does not run the
+function in `api/`, so settings sync is off locally unless `CLOCKIT_API_TARGET` points
+the dev server at a deployment.
 
 ## Features
 
@@ -65,6 +75,11 @@ gap and margin): drag a box between cells, pull its bottom-right corner to resiz
 move onto occupied cells snaps back rather than stacking. The GIF takes a link or an
 uploaded file, and fills or fits its box.
 
+**Settings follow you** — sign in with Spotify and your whole setup (theme, layout,
+backdrop, widget positions, presets) comes with you to any device. The most recent change
+wins, a stale device can never roll a newer save backwards, and a fresh browser never
+overwrites a real setup with factory defaults.
+
 **Spotify** — connect your own Spotify app and control whatever is already playing: a
 draggable player with artwork, scrubber, transport, shuffle, repeat and volume, set to
 stay on screen or fade when idle; synced
@@ -87,6 +102,8 @@ Everything persists to `localStorage`. Keyboard: `F` fullscreen, `H` hide clock,
 ## Layout
 
 ```
+api/
+  settings.ts   Vercel function: stores settings per Spotify user in Upstash Redis
 src/
   lib/          types, themes, paint (gradients), time, fonts, sound, share codes, PiP, hooks
   store/        settings (persisted), timer (runtime), pulse (clock -> backdrop channel)
@@ -97,6 +114,7 @@ src/
     menu/       the circular icon menu and its six panels
     ui/         sliders, segmented controls, toggles, colour fields
   features/
+    sync/       settings that follow the Spotify account across devices
     audio/      live capture, FFT, band levels and beat detection — see its README
     spotify/    PKCE auth, playback polling, lyrics, album colours — see its README
 ```

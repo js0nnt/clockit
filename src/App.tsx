@@ -5,6 +5,7 @@ import { CircularMenu } from './components/menu/CircularMenu'
 import { Workspace } from './components/workspace/Workspace'
 import { useAudioResume } from './features/audio/resume'
 import { useSpotifySync } from './features/spotify/sync'
+import { useSettingsSync } from './features/sync/sync'
 import { useFullscreen } from './lib/hooks'
 import { useSettings } from './store/settings'
 import { useTimer } from './store/timer'
@@ -12,6 +13,7 @@ import { useTimer } from './store/timer'
 export default function App() {
   useKeyboardShortcuts()
   useSpotifySync()
+  useSettingsSync()
   useAudioResume()
 
   return (
