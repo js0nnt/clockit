@@ -1,0 +1,523 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-panel: rgba(255, 255, 255, 0.14);
+  --color-panel-strong: rgba(255, 255, 255, 0.26);
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: #000;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+/* ---------------------------------------------------------------- flip clock */
+
+.clock {
+  perspective: var(--perspective);
+  perspective-origin: 50% 50%;
+}
+
+.tile {
+  position: relative;
+  width: var(--tile-w);
+  height: var(--tile-h);
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.22));
+}
+
+.half {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: calc(50% - var(--flap-gap) / 2);
+  overflow: hidden;
+  background-image: var(--flap-paint);
+  /* Paint the gradient across the whole tile, then show each half its own slice. */
+  background-size: var(--tile-w) var(--tile-h);
+  background-position: top center;
+  backface-visibility: hidden;
+}
+
+.half-top {
+  top: 0;
+  border-radius: var(--radius-edge) var(--radius-edge) var(--radius-centre) var(--radius-centre);
+}
+
+.half-bottom {
+  bottom: 0;
+  border-radius: var(--radius-centre) var(--radius-centre) var(--radius-edge) var(--radius-edge);
+}
+
+/* One continuous tile: no seam, no fold shading. */
+.tile[data-single='true'] .half {
+  height: 100%;
+  border-radius: var(--radius-edge);
+}
+.tile[data-single='true'] .half-bottom,
+.tile[data-single='true'] .leaf {
+  display: none;
+}
+
+.glyph {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: var(--tile-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-stack);
+  font-weight: var(--font-weight);
+  font-size: var(--text-size);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  background-image: var(--digit-paint);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  padding-bottom: var(--text-offset);
+}
+
+.half-top .glyph,
+.leaf-top .glyph {
+  top: 0;
+}
+
+.half-bottom .glyph,
+.leaf-bottom .glyph {
+  bottom: 0;
+}
+
+/* The two folding leaves, only mounted while a digit is changing. */
+.leaf {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: calc(50% - var(--flap-gap) / 2);
+  overflow: hidden;
+  background-image: var(--flap-paint);
+  background-size: var(--tile-w) var(--tile-h);
+  background-position: top center;
+  backface-visibility: hidden;
+  z-index: 2;
+}
+
+.leaf-top {
+  top: 0;
+  transform-origin: 50% 100%;
+  border-radius: var(--radius-edge) var(--radius-edge) var(--radius-centre) var(--radius-centre);
+  animation: leaf-fold-away var(--fold-duration) cubic-bezier(0.5, 0.05, 0.75, 0.55) forwards;
+}
+
+.leaf-bottom {
+  bottom: 0;
+  transform-origin: 50% 0%;
+  border-radius: var(--radius-centre) var(--radius-centre) var(--radius-edge) var(--radius-edge);
+  transform: rotateX(90deg);
+  animation: leaf-fold-in var(--fold-duration) cubic-bezier(0.3, 0.6, 0.35, 1) var(--fold-duration)
+    forwards;
+}
+
+/* Shading that sells the fold; strength comes from the Depth slider. */
+.leaf::after,
+.half::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.leaf-top::after {
+  background: linear-gradient(to bottom, transparent 40%, rgba(0, 0, 0, var(--depth)));
+  animation: shade-in var(--fold-duration) linear forwards;
+}
+
+.leaf-bottom::after {
+  background: linear-gradient(to top, transparent 40%, rgba(0, 0, 0, var(--depth)));
+  animation: shade-out var(--fold-duration) linear var(--fold-duration) forwards;
+}
+
+@keyframes leaf-fold-away {
+  from {
+    transform: rotateX(0deg);
+  }
+  to {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes leaf-fold-in {
+  0% {
+    transform: rotateX(90deg);
+  }
+  78% {
+    transform: rotateX(calc(-1deg * var(--bounce-deg)));
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+@keyframes shade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.glass .half,
+.glass .leaf {
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.28),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* ---------------------------------------------------------------- chrome */
+
+.glass-panel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.07));
+  backdrop-filter: blur(20px) saturate(140%);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.3),
+    inset -0.7px -0.7px 0 rgba(255, 255, 255, 0.18),
+    0 10px 34px rgba(0, 0, 0, 0.28);
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 2px;
+  height: 100%;
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leaf {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+}
+
+/* Idle leaves: settled in place with no animation (first paint, or a tile that
+   has not changed since load). */
+.leaf::after {
+  opacity: 0;
+}
+
+.leaf-top::after,
+.leaf-bottom::after {
+  animation-fill-mode: both;
+}
+
+.leaf[data-idle='true'] {
+  animation: none;
+}
+
+.leaf-top[data-idle='true'] {
+  transform: rotateX(-90deg);
+}
+
+.leaf-bottom[data-idle='true'] {
+  transform: rotateX(0deg);
+}
+
+.leaf[data-idle='true']::after {
+  animation: none;
+  opacity: 0;
+}
+
+/* Declared last so it wins over the `top center` default on `.leaf`. */
+.half-bottom,
+.leaf-bottom {
+  background-position: bottom center;
+}
+
+/* ---------------------------------------------------------------- backdrops */
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: var(--bd-intensity);
+}
+
+.backdrop > * {
+  position: absolute;
+  will-change: transform;
+}
+
+/* Aurora: slow light blooms drifting past each other. */
+.bd-blob {
+  width: 65vmax;
+  height: 65vmax;
+  border-radius: 50%;
+  filter: blur(60px);
+}
+
+.bd-blob:nth-child(1) {
+  left: -15vmax;
+  top: -20vmax;
+  background: radial-gradient(circle, var(--bd-accent1) 0%, transparent 68%);
+  animation: bd-drift-a calc(38s / var(--bd-speed)) ease-in-out infinite alternate;
+}
+
+.bd-blob:nth-child(2) {
+  right: -20vmax;
+  top: -10vmax;
+  background: radial-gradient(circle, var(--bd-accent2) 0%, transparent 68%);
+  animation: bd-drift-b calc(47s / var(--bd-speed)) ease-in-out infinite alternate;
+}
+
+.bd-blob:nth-child(3) {
+  left: 10vmax;
+  bottom: -30vmax;
+  background: radial-gradient(circle, var(--bd-accent2) 0%, transparent 65%);
+  animation: bd-drift-c calc(53s / var(--bd-speed)) ease-in-out infinite alternate;
+}
+
+.bd-blob:nth-child(4) {
+  right: -10vmax;
+  bottom: -25vmax;
+  background: radial-gradient(circle, var(--bd-accent1) 0%, transparent 70%);
+  animation: bd-drift-a calc(61s / var(--bd-speed)) ease-in-out infinite alternate-reverse;
+}
+
+@keyframes bd-drift-a {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(22vmax, 14vmax, 0) scale(1.25);
+  }
+}
+
+@keyframes bd-drift-b {
+  from {
+    transform: translate3d(0, 0, 0) scale(1.15);
+  }
+  to {
+    transform: translate3d(-26vmax, 20vmax, 0) scale(0.85);
+  }
+}
+
+@keyframes bd-drift-c {
+  from {
+    transform: translate3d(0, 0, 0) scale(0.9);
+  }
+  to {
+    transform: translate3d(18vmax, -22vmax, 0) scale(1.3);
+  }
+}
+
+/* Rays: soft diagonal bands sliding across, two layers at different rates. */
+.bd-rays {
+  --rays-blur: 30px;
+  inset: -60%;
+  /* Band widths in vmin rather than percentages, so the pattern stays the same
+     size however large the oversized layer ends up. */
+  background-image: repeating-linear-gradient(
+    115deg,
+    transparent 0 6vmin,
+    var(--bd-accent1) 7vmin 10vmin,
+    transparent 11vmin 20vmin,
+    var(--bd-accent2) 21vmin 24vmin,
+    transparent 25vmin 38vmin
+  );
+  animation: bd-sweep calc(26s / var(--bd-speed)) linear infinite;
+}
+
+.bd-rays + .bd-rays {
+  --rays-blur: 58px;
+  opacity: 0.6;
+  animation-duration: calc(41s / var(--bd-speed));
+  animation-direction: reverse;
+}
+
+/* One full period of the 115deg pattern: (sin115, -cos115) * 38vmin. */
+@keyframes bd-sweep {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(34.4vmin, 16.1vmin, 0);
+  }
+}
+
+/* Tide: overlapping liquid crests rolling under the clock. */
+.bd-crest {
+  left: 50%;
+  bottom: -152vmax;
+  width: 170vmax;
+  height: 170vmax;
+  margin-left: -85vmax;
+  border-radius: 44% 56% 48% 52% / 46% 44% 56% 54%;
+  background: var(--bd-accent1);
+  opacity: 0.5;
+  animation: bd-roll calc(24s / var(--bd-speed)) linear infinite;
+}
+
+.bd-crest:nth-child(2) {
+  bottom: -158vmax;
+  background: var(--bd-accent2);
+  opacity: 0.4;
+  border-radius: 52% 48% 40% 60% / 52% 56% 44% 48%;
+  animation-duration: calc(33s / var(--bd-speed));
+  animation-direction: reverse;
+}
+
+.bd-crest:nth-child(3) {
+  bottom: -164vmax;
+  opacity: 0.3;
+  animation-duration: calc(45s / var(--bd-speed));
+}
+
+@keyframes bd-roll {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Grid: a plane running away to a glowing horizon. The layer is rotated about its
+   top edge, which becomes the horizon line. */
+.bd-grid {
+  left: -60%;
+  right: -60%;
+  top: 52%;
+  height: 100%;
+  transform: perspective(24vmin) rotateX(62deg);
+  transform-origin: 50% 0%;
+  background-image:
+    linear-gradient(to right, var(--bd-accent1) 0 2px, transparent 2px),
+    linear-gradient(to bottom, var(--bd-accent1) 0 2px, transparent 2px);
+  background-size: 5vmin 5vmin;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 16%, black 72%, transparent 100%);
+  animation: bd-run calc(4s / var(--bd-speed)) linear infinite;
+}
+
+.bd-horizon {
+  left: 0;
+  right: 0;
+  top: 32%;
+  height: 24vmin;
+  background: radial-gradient(ellipse at 50% 100%, var(--bd-accent2) 0%, transparent 68%);
+  filter: blur(14px);
+  animation: bd-glow calc(7s / var(--bd-speed)) ease-in-out infinite alternate;
+}
+
+@keyframes bd-run {
+  from {
+    background-position:
+      0 0,
+      0 0;
+  }
+  to {
+    background-position:
+      0 0,
+      0 5vmin;
+  }
+}
+
+@keyframes bd-glow {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop * {
+    animation: none !important;
+  }
+}
+
+/* ------------------------------------------------- music-reactive backdrops */
+
+/* `--audio-boost` is 1 and `--audio-beat` is 0 with no audio source, so these
+   expressions collapse to the static appearance. */
+:root {
+  --audio-boost: 1;
+  --audio-beat: 0;
+  --audio-bass: 0;
+  --audio-level: 0;
+}
+
+.backdrop {
+  opacity: calc(var(--bd-intensity) * var(--audio-boost));
+  transform: scale(calc(1 + var(--audio-beat) * 0.03));
+  transition: transform 90ms ease-out;
+}
+
+/* Aurora blooms breathe on the beat. */
+.bd-blob {
+  scale: calc(1 + var(--audio-beat) * 0.12);
+  transition: scale 110ms ease-out;
+}
+
+/* Rays sharpen and brighten with bass rather than moving, so the drift stays
+   smooth. `--rays-blur` carries each layer's own blur through the calc. */
+.bd-rays {
+  filter: blur(calc(var(--rays-blur) - var(--audio-bass) * 8px))
+    brightness(calc(1 + var(--audio-beat) * 0.5));
+}
+
+/* Crests rise with the low end. */
+.bd-crest {
+  translate: 0 calc(var(--audio-bass) * -3vmin);
+  transition: translate 140ms ease-out;
+}
+
+/* The horizon glow is the loudness meter. */
+.bd-horizon {
+  scale: calc(1 + var(--audio-level) * 0.25);
+  filter: blur(14px) brightness(calc(1 + var(--audio-beat) * 0.8));
+}
