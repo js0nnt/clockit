@@ -116,6 +116,7 @@ export interface SettingsState extends PortableState {
   setWorkspace: <K extends keyof Workspace>(key: K, value: Workspace[K]) => void
   setFreeSpot: (id: WidgetId, spot: FreeSpot) => void
   setBentoSpot: (id: WidgetId, spot: BentoSpot) => void
+  setBentoSpots: (spots: Partial<Record<WidgetId, BentoSpot>>) => void
   setGif: <K extends keyof GifSettings>(key: K, value: GifSettings[K]) => void
   resizeGrid: (columns: number, rows: number) => void
   applyTheme: (themeId: string) => void
@@ -189,6 +190,15 @@ export const useSettings = create<SettingsState>()(
             },
           },
         })),
+
+      setBentoSpots: (spots) =>
+        set((s) => {
+          const placements = { ...s.workspace.placements }
+          for (const [id, spot] of Object.entries(spots) as [WidgetId, BentoSpot][]) {
+            placements[id] = { ...placements[id], bento: spot }
+          }
+          return { workspace: { ...s.workspace, placements } }
+        }),
 
       setGif: (key, value) =>
         set((s) => ({ workspace: { ...s.workspace, gif: { ...s.workspace.gif, [key]: value } } })),

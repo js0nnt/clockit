@@ -163,29 +163,38 @@ export function useDragAnchor(
     [onChange],
   )
 
-  // A preset or a window resize can leave the element hanging off an edge.
+  // The element's size and the window's, so the anchor can be kept on screen.
+  const [fit, setFit] = useState({ width: 0, height: 0, viewW: 0, viewH: 0 })
   useEffect(() => {
     const node = ref.current
     if (!node) return
 
-    const settle = () => {
-      const box = node.getBoundingClientRect()
-      if (!box.width || !box.height) return
-      const next = clampAnchor(anchor, box.width, box.height)
-      if (Math.abs(next.x - anchor.x) > 0.001 || Math.abs(next.y - anchor.y) > 0.001) {
-        onChange(next)
-      }
+    const measure = () => {
+      // offsetWidth, not getBoundingClientRect: the rect includes transforms, and
+      // the drift and DVD bounce would make it jitter every frame.
+      setFit({
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+        viewW: window.innerWidth,
+        viewH: window.innerHeight,
+      })
     }
 
-    settle()
-    const observer = new ResizeObserver(settle)
+    measure()
+    const observer = new ResizeObserver(measure)
     observer.observe(node)
-    window.addEventListener('resize', settle)
+    window.addEventListener('resize', measure)
     return () => {
       observer.disconnect()
-      window.removeEventListener('resize', settle)
+      window.removeEventListener('resize', measure)
     }
-  }, [anchor, onChange])
+  }, [])
 
-  return { ref, dragging, anchor: preview ?? anchor, onPointerDown }
+  // Clamp only what is *shown*. The saved anchor stays exactly where it was put, so a
+  // window shrinking — or moving to a narrower monitor — slides a widget inward for
+  // now, and widening it again brings the widget straight back. Saving the clamped
+  // value instead would overwrite the layout every time the window changed size.
+  const shown = fit.width && fit.viewW ? clampAnchor(anchor, fit.width, fit.height) : anchor
+
+  return { ref, dragging, anchor: preview ?? shown, onPointerDown }
 }

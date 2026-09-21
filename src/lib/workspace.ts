@@ -95,22 +95,6 @@ export function insideGrid(spot: BentoSpot, columns: number, rows: number): bool
   )
 }
 
-/**
- * A bento move is allowed only onto empty cells — overlapping boxes would stack on
- * top of each other, which is exactly what a bento layout is meant to avoid.
- */
-export function spotIsFree(
-  spot: BentoSpot,
-  self: WidgetId,
-  placements: Record<WidgetId, Placement>,
-  present: WidgetId[],
-  columns: number,
-  rows: number,
-): boolean {
-  if (!insideGrid(spot, columns, rows)) return false
-  return !present.some((id) => id !== self && overlaps(spot, placements[id].bento))
-}
-
 /** Pulls a placement back inside the grid after the grid is made smaller. */
 export function fitToGrid(spot: BentoSpot, columns: number, rows: number): BentoSpot {
   const w = clamp(spot.w, 1, columns)
@@ -121,4 +105,94 @@ export function fitToGrid(spot: BentoSpot, columns: number, rows: number): Bento
     col: clamp(spot.col, 0, columns - w),
     row: clamp(spot.row, 0, rows - h),
   }
+}
+
+/**
+ * Who keeps their spot when two boxes want the same cells: the clock is what the
+ * app is for, then the player, lyrics and GIF. The same order, reversed, decides
+ * who shrinks first when the grid is too small for everything.
+ */
+const PRIORITY: WidgetId[] = ['clock', 'player', 'lyrics', 'gif']
+
+/**
+ * Lays the given widgets into the grid with no two boxes overlapping.
+ *
+ * Saved spots can collide: shrinking the grid pulls every box inside it on its own,
+ * and a widget that appears (the player when music starts, a GIF switched on) comes
+ * back to cells something else may have moved into. Each box keeps its saved spot if
+ * that is free, otherwise takes the nearest free spot of the same size. When there is
+ * no room at all, the lowest-priority box shrinks a step and the whole thing is tried
+ * again — so with at least one cell per widget, everything always fits.
+ */
+export function packLayout(
+  placements: Record<WidgetId, Placement>,
+  ids: WidgetId[],
+  columns: number,
+  rows: number,
+): Record<WidgetId, BentoSpot> {
+  const order = PRIORITY.filter((id) => ids.includes(id))
+  const wanted = Object.fromEntries(
+    order.map((id) => [id, fitToGrid(placements[id].bento, columns, rows)]),
+  ) as Record<WidgetId, BentoSpot>
+  const sizes = Object.fromEntries(
+    order.map((id) => [id, { w: wanted[id].w, h: wanted[id].h }]),
+  ) as Record<WidgetId, { w: number; h: number }>
+
+  // Each round shrinks one box by one cell, so this bounds the work outright.
+  const maxRounds = order.reduce((n, id) => n + sizes[id].w + sizes[id].h, 0) + 1
+  for (let round = 0; round < maxRounds; round++) {
+    const placed: BentoSpot[] = []
+    const result = {} as Record<WidgetId, BentoSpot>
+    let blocked: WidgetId | null = null
+
+    for (const id of order) {
+      const { w, h } = sizes[id]
+      const target = fitToGrid({ ...wanted[id], w, h }, columns, rows)
+      const spot = nearestFree(target, placed, columns, rows)
+      if (!spot) {
+        blocked = id
+        break
+      }
+      result[id] = spot
+      placed.push(spot)
+    }
+    if (!blocked) return result
+
+    // Make room: shrink the lowest-priority box that still can, along its longer side.
+    const victim = [...order].reverse().find((id) => sizes[id].w * sizes[id].h > 1)
+    if (!victim) break
+    const size = sizes[victim]
+    if (size.w >= size.h) size.w -= 1
+    else size.h -= 1
+  }
+
+  // Fewer cells than widgets: nothing can avoid overlapping, so fall back to saved spots.
+  return wanted
+}
+
+/** The free spot of `target`'s size closest to where `target` wants to be, if any. */
+function nearestFree(
+  target: BentoSpot,
+  placed: BentoSpot[],
+  columns: number,
+  rows: number,
+): BentoSpot | null {
+  const free = (spot: BentoSpot) =>
+    insideGrid(spot, columns, rows) && !placed.some((other) => overlaps(spot, other))
+  if (free(target)) return target
+
+  let best: BentoSpot | null = null
+  let bestDistance = Infinity
+  for (let row = 0; row + target.h <= rows; row++) {
+    for (let col = 0; col + target.w <= columns; col++) {
+      const spot = { col, row, w: target.w, h: target.h }
+      if (!free(spot)) continue
+      const distance = Math.abs(col - target.col) + Math.abs(row - target.row)
+      if (distance < bestDistance) {
+        best = spot
+        bestDistance = distance
+      }
+    }
+  }
+  return best
 }

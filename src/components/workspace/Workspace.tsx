@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { RotateCcw } from 'lucide-react'
 import { FlipClock } from '../FlipClock'
 import { GifWidget } from './GifWidget'
@@ -10,7 +10,9 @@ import { useDvdBounce, useElementSize, usePointerActive } from '@/lib/hooks'
 import {
   DEFAULT_WORKSPACE,
   clamp,
-  spotIsFree,
+  insideGrid,
+  overlaps,
+  packLayout,
   type BentoSpot,
   type WidgetId,
 } from '@/lib/workspace'
@@ -191,10 +193,19 @@ interface BentoDrag {
 function BentoLayout({ present }: { present: ReturnType<typeof usePresentWidgets> }) {
   const workspace = useSettings((s) => s.workspace)
   const setBentoSpot = useSettings((s) => s.setBentoSpot)
+  const setBentoSpots = useSettings((s) => s.setBentoSpots)
   const grid = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<BentoDrag | null>(null)
 
   const { columns, rows, gap, padding, placements, boxes } = workspace
+
+  // What is actually shown: saved spots with any collisions resolved. Everything
+  // below — drawing, where a drag starts, what it may land on — works from this, so
+  // the grid on screen and the rules for moving within it can never disagree.
+  const layout = useMemo(
+    () => packLayout(placements, present.ids, columns, rows),
+    [placements, present.ids, columns, rows],
+  )
 
   /** Which cell a client point falls in, clamped to the grid. */
   const cellAt = useCallback(
@@ -213,7 +224,7 @@ function BentoLayout({ present }: { present: ReturnType<typeof usePresentWidgets
 
   const begin = useCallback(
     (id: WidgetId, event: React.PointerEvent, kind: 'move' | 'resize') => {
-      const start = placements[id].bento
+      const start = layout[id]
       const origin = cellAt(event.clientX, event.clientY)
       // Keep the cell the drag started on under the pointer while moving.
       const grabCol = origin.col - start.col
@@ -237,11 +248,10 @@ function BentoLayout({ present }: { present: ReturnType<typeof usePresentWidgets
 
       const evaluate = (clientX: number, clientY: number): BentoDrag => {
         const spot = nextSpot(clientX, clientY)
-        return {
-          id,
-          spot,
-          valid: spotIsFree(spot, id, placements, present.ids, columns, rows),
-        }
+        const valid =
+          insideGrid(spot, columns, rows) &&
+          !present.ids.some((other) => other !== id && overlaps(spot, layout[other]))
+        return { id, spot, valid }
       }
 
       const move = (e: PointerEvent) => setDrag(evaluate(e.clientX, e.clientY))
@@ -251,7 +261,10 @@ function BentoLayout({ present }: { present: ReturnType<typeof usePresentWidgets
         window.removeEventListener('pointercancel', finish)
         const final = evaluate(e.clientX, e.clientY)
         // An invalid drop snaps back rather than stacking boxes on top of each other.
-        if (final.valid) setBentoSpot(id, final.spot)
+        // A valid one saves the whole layout as shown, so any box that had been moved
+        // aside keeps its new spot instead of reclaiming its old one out from under
+        // the box that was just dropped.
+        if (final.valid) setBentoSpots({ ...layout, [id]: final.spot })
         setDrag(null)
       }
 
@@ -262,7 +275,7 @@ function BentoLayout({ present }: { present: ReturnType<typeof usePresentWidgets
       event.preventDefault()
       event.stopPropagation()
     },
-    [cellAt, columns, rows, placements, present.ids, setBentoSpot],
+    [cellAt, columns, rows, layout, present.ids, setBentoSpots],
   )
 
   return (
@@ -279,7 +292,7 @@ function BentoLayout({ present }: { present: ReturnType<typeof usePresentWidgets
     >
       {present.ids.map((id) => {
         const live = drag?.id === id ? drag : null
-        const spot = live?.spot ?? placements[id].bento
+        const spot = live?.spot ?? layout[id]
         return (
           <BentoWidget
             key={id}
